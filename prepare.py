@@ -5,6 +5,7 @@ import torch
 from collections import deque
 from PIL import Image
 from torchvision.transforms import ToTensor
+from tqdm import tqdm
 
 
 def extract_number(filename: str) -> int:
@@ -49,7 +50,7 @@ def split_images(input_dir: str, output_dir: str, seq_len: int, sub_image_size: 
     # 获取文件夹中的所有文件并按文件名排序
     file_names = sorted(os.listdir(input_dir), key=extract_number)
     tensor_list=deque()
-    for end_index in range(len(file_names)):
+    for end_index in tqdm(range(len(file_names))):
         image = Image.open(os.path.join(input_dir, file_names[end_index]))
         tensor_list.append(ToTensor()(image).squeeze(0))
         image.close()
@@ -66,11 +67,11 @@ def split_images(input_dir: str, output_dir: str, seq_len: int, sub_image_size: 
 if __name__ == '__main__':
 
     # 设置输入参数
-    input_directory = "/Users/shuyi/dataset/minirockCT"
-    output_directory = "/Users/shuyi/dataset/rockCT_tensor"
+    input_directory = "./input"
+    output_directory = "/media/cw/0EC03BB6C03BA33F/dataset/rock600_6"
     seq_len=6
     sub_image_size =(seq_len,600,600)
-    num_sub_images = 10
+    num_sub_images = 5
 
     # 进行图像截取和保存
     split_images(input_directory, output_directory,seq_len, sub_image_size, num_sub_images)

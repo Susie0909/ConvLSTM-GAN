@@ -228,7 +228,7 @@ class Generator(nn.Module):
         self.convlstm = CLSTM(input_dim, hidden_dim, kernel_size, num_layers,
                  batch_first, bias, return_all_layers)
         self.generator_head = nn.Conv2d(hidden_dim[-1], output_dim, kernel_size, stride=1, padding=1)
-        self.model = nn.ModuleList([self.convlstm, self.generator_head])
+        self.model = nn.ModuleList([self.convlstm, self.generator_head, nn.Tanh()])
 
     def forward(self, x):
         """
@@ -236,7 +236,8 @@ class Generator(nn.Module):
         """
         _, last_states = self.model[0](x)
         h = last_states[0][0] # [b, hidden_dim, h, w]
-        output = self.model[1](h).unsqueeze(1) # [b, 1, h, w]
+        output = self.model[1](h)
+        output = self.model[2](output).unsqueeze(1) # [b, 1, 1, h, w], 为了便于后续seq_len维度上concat
 
         return output
     

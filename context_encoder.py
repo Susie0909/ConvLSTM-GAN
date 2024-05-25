@@ -13,8 +13,8 @@ from models import *
 import torch
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--root_dir", type=str, default="/Users/shuyi/dataset/rockCT_tensor", help="root dir of img dataset")
-parser.add_argument("--out_dir", type=str, default="/Users/shuyi/dataset/rockCT_train_out", help="out dir to save the generated image")
+parser.add_argument("--root_dir", type=str, default="./input600_6", help="root dir of img dataset")
+parser.add_argument("--out_dir", type=str, default="/media/cw/0EC03BB6C03BA33F/dataset/rock20240520_output", help="out dir to save the generated image")
 parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=2, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
@@ -22,10 +22,10 @@ parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first 
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=0, help="number of cpu threads to use during batch generation")
 
-parser.add_argument("--img_size", type=int, default=512, help="size of each image dimension")
+parser.add_argument("--img_size", type=int, default=600, help="size of each image dimension")
 
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
-parser.add_argument("--sample_interval", type=int, default=5, help="interval between image sampling")
+parser.add_argument("--sample_interval", type=int, default=500, help="interval between image sampling")
 opt = parser.parse_args()
 print(opt)
 
@@ -36,8 +36,8 @@ cuda = True if torch.cuda.is_available() else False
 
 # Calculate output of image discriminator (PatchGAN)
 # patch_h, patch_w = int(opt.mask_size / 2 ** 3), int(opt.mask_size / 2 ** 3)
-patch_h, patch_w = int(opt.img_size / 2 ** 4), int(opt.img_size / 2 ** 4)
-patch = (1, patch_h, patch_w)
+# patch_h, patch_w = int(opt.img_size / 2 ** 4), int(opt.img_size / 2 ** 4) 
+# patch = (1, patch_h, patch_w)
 
 
 def weights_init_normal(m):
@@ -55,8 +55,8 @@ adversarial_loss = torch.nn.MSELoss()
 
 # Initialize generator and discriminator
 seq_len = 6
-generator = Generator(output_dim=1, input_dim=1, hidden_dim=[16, 16, 16], kernel_size=(3, 3), num_layers=3)
-discriminator = Discriminator(output_dim=1, input_dim=1, hidden_dim=[16, 16, 16, 8], kernel_size=(3, 3), num_layers=4)
+generator = Generator(output_dim=1, input_dim=1, hidden_dim=[8, 12, 8], kernel_size=(3, 3), num_layers=3)
+discriminator = Discriminator(output_dim=1, input_dim=1, hidden_dim=[8, 8, 8], kernel_size=(3, 3), num_layers=3)
 
 if cuda:
     generator.cuda()
@@ -98,8 +98,8 @@ def save_sample(batches_done):
     # Save sample
     seq_len = samples.size()[1]
     for seq_i in range(seq_len):
-        save_image(samples[:25, seq_i, :, :], "%s/%d_ori_%d.png" % (opt.out_dir, batches_done, seq_i), nrow=5, normalize=True)
-    save_image(gen_imgs[:25, -1, :, :], "%s/%d_gen_%d.png" % (opt.out_dir, batches_done, seq_len - 1), nrow=5, normalize=True)
+        save_image(samples[:25, seq_i, :, :, :], "%s/%d_ori_%d.png" % (opt.out_dir, batches_done, seq_i), nrow=5, normalize=True)
+    save_image(gen_imgs[:25, -1, :, :, :], "%s/%d_gen_%d.png" % (opt.out_dir, batches_done, seq_len - 1), nrow=5, normalize=True)
 
 
 # ----------
@@ -109,12 +109,8 @@ def save_sample(batches_done):
 for epoch in range(opt.n_epochs):
     for i, imgs in enumerate(dataloader):
 
-        # Adversarial ground truths
-        valid = Variable(Tensor(imgs.shape[0], *patch).fill_(1.0), requires_grad=False)
-        fake = Variable(Tensor(imgs.shape[0], *patch).fill_(0.0), requires_grad=False)
-
         # Configure input
-        imgs = Variable(imgs)
+        imgs = Variable(imgs.type(Tensor))
 
         # -----------------
         #  Train Generator
@@ -122,12 +118,17 @@ for epoch in range(opt.n_epochs):
 
         optimizer_G.zero_grad()
 
-        
         # gen_imgs = generator(imgs)
         gen_img = generator(imgs[:, :-1, ...]) # [bs, 1, h, w]
         gen_imgs = torch.cat([imgs[:, :-1, ...], gen_img], dim=1)
         # Adversarial loss
-        g_loss = adversarial_loss(discriminator(gen_imgs), valid)
+        gen_imgs_discri = discriminator(gen_imgs)
+        patch_size = gen_imgs_discri.size()[-1]
+        patch = (1, patch_size, patch_size)
+        # Adversarial ground truths
+        valid = Variable(Tensor(imgs.shape[0], *patch).fill_(1.0), requires_grad=False)
+        fake = Variable(Tensor(imgs.shape[0], *patch).fill_(0.0), requires_grad=False)
+        g_loss = adversarial_loss(gen_imgs_discri, valid)
 
         g_loss.backward()
         optimizer_G.step()
