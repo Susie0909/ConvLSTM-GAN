@@ -25,7 +25,7 @@ parser.add_argument("root_dir", type=str, default='../../input1', help="root dir
 parser.add_argument("out_dir", type=str, default='out', help="out dir to save the generated image seq")
 parser.add_argument("ckpt", type=str, default='../../ckpt.pth', help="checkpoint of generator")
 parser.add_argument("--height", type=int, default=1, help="number of generate images")
-parser.add_argument("--ckpt_dir", type=str, help="root dir of ckpts for testing which ckpt is the best")
+parser.add_argument("--ckpt_dir", type=str, default='',  help="root dir of ckpts for testing which ckpt is the best")
 opt = parser.parse_args()
 print(opt)
 
